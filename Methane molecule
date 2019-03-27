@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="description" content="https://jsbin.com/fovitis/edit?html,output" />
+  	<meta charset="utf-8" />
+	<title>https://jsbin.com/fovitis/edit?html,output</title>
+	<style>
+		#container {
+			background: #FFFFFF;
+			width: 100%;
+			height: 100%;
+		}
+	</style>
+<meta charset=utf-8 />  
+<style id="jsbin-css"></style>
+</head>
+<body>
+<div id="container"></div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.5/dat.gui.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@fab06914157b741461ab6fe34f46b24e81506336/build/three.min.js"></script>
+<script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/5.4.2/math.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@e4063750a93a643fce333a17a06b6b5015d9dc99/examples/js/WebGL.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@7a86f938b389754af14b6001a5f7679b660c946b/examples/js/utils/SceneUtils.js"></script>
+	<script type="text/javascript">
+//General setuip
+	var WIDTH = 600, HEIGHT = 600;
+	var VIEW_ANGLE = 45, ASPECT = WIDTH / HEIGHT, NEAR = 1, FAR = 1000;
+	var $container = $('#container');
+    if ( WEBGL.isWebGL2Available() )
+        {
+            var canvas = document.createElement( 'canvas' );
+            var context = canvas.getContext( 'webgl2' );
+            var renderer = new THREE.WebGLRenderer( { canvas: canvas, context: context} );
+        }
+        else if ( WEBGL.isWebGLAvailable() )
+        var renderer = new THREE.WebGLRenderer();   
+        else
+            throw "WebGL not available. No suitable renderer available.";  
+
+    renderer.setClearColor( 0x000000, 1 );
+    renderer.shadowMapEnabled = true;
+    renderer.shadowMapType = THREE.PCFSoftShadowMap;
+	var scene = new THREE.Scene();
+	var clock = new THREE.Clock();
+	var camera = new THREE.PerspectiveCamera(VIEW_ANGLE,ASPECT,NEAR,FAR);
+	camera.position.z = 200;    	
+	scene.add(camera)
+// 	var cameraControls = new THREE.OrbitControls(camera, renderer.domElement);
+// 	cameraControls.addEventListener( 'mousemove', renderer );
+	renderer.setSize(WIDTH, HEIGHT);
+	$container.append(renderer.domElement);
+
+        /* Start of create molecule */
+        var DEG2RAD = THREE.Math.DEG2RAD; // conveniently convert degrees -> radians
+        // hold the molecules and bonds
+        var methane = new THREE.Group();
+        scene.add(methane);
+
+        // create the carbon sphere
+        // geo and mat are re-used on all further objects
+        var geo = new THREE.SphereGeometry(8, 32, 32);
+        var mat = new THREE.MeshStandardMaterial({color: 0xff0000});
+        var carbon = new THREE.Mesh(geo, mat);
+        carbon.castShadow = true;
+        methane.add(carbon);
+
+        // create the top hydrogen atom that sits directly above 
+        // the carbon atom
+        geo = new THREE.SphereGeometry(4, 16, 16);
+        mat = new THREE.MeshStandardMaterial({color: 0x0000ff});
+        var hydro = new THREE.Mesh(geo, mat);
+        hydro.position.set(0, 18, 0);
+        methane.add(hydro);
+
+        // create the bottom three hydrogen atoms
+        // the position was determined by trial and error
+        for (var i = 0; i < 3; i++)
+        {
+            // create the atom, position, and add to scene
+            geo = new THREE.SphereGeometry(4, 16, 16);
+            math = new THREE.MeshStandardMaterial({color: 0x0000ff});
+            hydro = new THREE.Mesh(geo, mat);
+            hydro.position.set(16, -18, 0);
+            scene.add(hydro);
+
+            // this makes the atom stay in the right spot when added to
+            // the methane group
+            scene.updateMatrixWorld();
+            // transfer hydrogen from the scene to methane
+            THREE.SceneUtils.attach(hydro, scene, methane);
+            // rotate the methane molecule before putting in next hydrogen
+            methane.rotateY(DEG2RAD * -120);
+        }
+
+        // create the top cylinder that ties the carbon to the top hydrogen
+        geo = new THREE.CylinderGeometry(1, 1, 18, 32);
+        mat = new THREE.MeshStandardMaterial({color: 0xffffff});
+        // cyl is re-used for other cylinders
+        var cyl = new THREE.Mesh(geo, mat);
+        cyl.position.y = 12;
+        methane.add(cyl);
+
+        // create the bottom three cylinders that connect the
+        // bottom hydrogens to the carbon. The position was determined
+        // by trial and error. The methane molecule spins around each
+        // iteration like it did when adding hydrogen molecules
+        for (i = 0; i < 3; i++)
+        {
+            // create the cylinder
+            geo = new THREE.CylinderGeometry(1, 1, 18, 32);
+            mat = new THREE.MeshStandardMaterial({color: 0xffffff});
+            cyl = new THREE.Mesh(geo, mat);
+
+            // position cylinder, rotation makes it touch both atoms
+            cyl.rotateZ(DEG2RAD * 45);
+            cyl.position.set(8, -9, 0);
+
+            scene.add(cyl);
+
+            // transfer from scene to methane
+            scene.updateMatrixWorld();
+            THREE.SceneUtils.attach(cyl, scene, methane);
+            // rotate methane so next cylinder goes in right spot
+            methane.rotateY(DEG2RAD * -120);
+        }
+        /* End of create Molecule */
+
+        // create the plane
+        geo = new THREE.PlaneGeometry(1024, 1024);
+        mat = new THREE.MeshStandardMaterial({color: 0x808080});
+        var plane = new THREE.Mesh(geo, mat);
+        plane.position.set(0, 0, -128);
+        plane.receiveShadow = true;
+        scene.add(plane);
+
+        // scale the methane molecule
+        methane.scale.set(1.5, 1.5, 1.5);
+
+        // create the lighting
+        var ambient = new THREE.AmbientLight(0xffffff);
+        scene.add(ambient);
+
+        // create a spotlight to shine on the molecule
+        var spot = new THREE.SpotLight(0xffffff, 0.5);
+        spot.position.set(32, 32, 256);
+        spot.target = methane;
+        spot.castShadow = true;
+        scene.add(spot);
+
+        // set up mouse controls
+        // the next two variables are used in rotating the methan molecule
+        // the x/y coordinates of the mouse when the click/drag started
+        var lastMousePos = [undefined, undefined];
+        // the x/y coordinates of the mouse this frame
+        var mousePos = [undefined, undefined];
+        // whether the mouse is clicked
+        var mousePressed = false;
+
+        // called when user starts click+drag; starts user-controlled
+        // rotation of methane molecule
+        function mouseDown(e)
+        {
+            mousePressed = true;
+            var x = e.clientX;
+            var y = e.clientY;
+            lastMousePos = [x, y];
+        }
+
+        // called when user releases mouse button; ends user-controlled rotation
+        // of methane molecule
+        function mouseUp(e)
+        {
+            mousePressed = false;
+            lastMousePos = [undefined, undefined];
+        }
+
+        // called whenever mouse moves, is used to determine where the mouse is
+        // this frame for rotating methane
+        function mouseMove(e)
+        {
+            mousePos[0] = e.clientX;
+            mousePos[1] = e.clientY;
+        }
+
+        // add the event listeners for the mouse
+        window.addEventListener("mousedown", mouseDown);
+        window.addEventListener("mouseup", mouseUp);
+        window.addEventListener("mousemove", mouseMove);
+
+        // set up keyboard controls
+        // keys is used to lookup keyCodes
+        var keys = {"shift": 16, "f": 70}
+        // {keyCode: Boolean} representing whether each keyCode is currently pressed
+        var keyboard = {}
+
+        // key is pressed
+        function keyDown(e)
+        {
+            keyboard[e.keyCode] = true;
+        }
+
+        // key is released
+        function keyUp(e)
+        {
+            keyboard[e.keyCode] = false;
+        }
+
+        // listen for key presses
+        window.addEventListener("keydown", keyDown);
+        window.addEventListener("keyup", keyUp);
+
+	function animate() {
+                if (mousePressed) // only rotate methane if the mouse is currently clicked
+                {
+                    // rotate on x axis based on up/down position of the mouse
+                    var xRotation = (lastMousePos[1] - mousePos[1]) / -1000;
+                    methane.rotateX(xRotation);
+
+                    // only rotate on y if shift not pressed
+                    if (! (keyboard[keys["shift"]] || keyboard[keys["f"]]))
+                    {
+                        var yRotation = (lastMousePos[0] - mousePos[0]) / -1000;
+                        methane.rotateY(yRotation);
+                    }
+                    else // rotate on z axis if shift pressed
+                    {
+                        var zRotation = (lastMousePos[0] - mousePos[0]) / 1000;
+                        methane.rotateZ(zRotation);
+                    }
+                }
+
+		requestAnimationFrame(animate);
+		render();
+	}
+
+	function render() {
+ 		// cameraControls.update();
+		renderer.render(scene, camera);
+	}
+	animate();
+	</script>
+  </body>
+</html>
