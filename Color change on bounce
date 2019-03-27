@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="description" content="Color Change on Bounce" />
+  	<meta charset="utf-8" />
+	<title>Sample Three.js</title>
+	<style>
+		#container {
+			background: #ffffff;
+			width: 100%;
+			height: 100%;
+		}
+	</style>
+<meta charset=utf-8 />
+<title>https://jsbin.com/zeyidol/edit?html</title>
+  
+<style id="jsbin-css">
+
+</style>
+</head>
+<body>
+<div id="container">
+</div>
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.5/dat.gui.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@fab06914157b741461ab6fe34f46b24e81506336/build/three.min.js"></script>
+<script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/5.4.2/math.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@e4063750a93a643fce333a17a06b6b5015d9dc99/examples/js/WebGL.js"></script>
+	<script type="text/javascript">
+
+	// set the scene size, camera, DOM, renderer, clock, and background color
+	var WIDTH = 600, HEIGHT = 600;
+	var VIEW_ANGLE = 45, ASPECT = WIDTH / HEIGHT, NEAR = 1, FAR = 1000;
+	var $container = $('#container');
+	if ( WEBGL.isWebGL2Available() )
+        {
+            var canvas = document.createElement( 'canvas' );
+            var context = canvas.getContext( 'webgl2' );
+            var renderer = new THREE.WebGLRenderer( { canvas: canvas, context: context} );
+        }
+        else if ( WEBGL.isWebGLAvailable() )
+        var renderer = new THREE.WebGLRenderer();   
+        else
+            throw "WebGL not available. No suitable renderer available.";  
+        renderer.setClearColor( 0xffffff, 1 );
+	var scene = new THREE.Scene();
+	var clock = new THREE.Clock();
+	var camera = new THREE.PerspectiveCamera(VIEW_ANGLE,ASPECT,NEAR,FAR);
+	camera.position.z = 128;
+        camera.position.y = 32;
+	scene.add(camera)
+	var cameraControls = new THREE.OrbitControls(camera, renderer.domElement);
+	cameraControls.addEventListener( 'mousemove', renderer );
+	renderer.setSize(WIDTH, HEIGHT);
+        renderer.shadowMapEnabled = true;
+        renderer.shadowMapType = THREE.PCFSoftShadowMap;
+	$container.append(renderer.domElement);
+
+        /* Global variables */
+        // the min/max values before the knot starts going off screen
+        // minY is only -32 due to space taken up by the console
+        var bounds = {minX: -96, maxX: 96, minY: -28, maxY: 64};
+        // how much to move the knot each frame
+        var velocities = {x: 0.75, y: -0.5};
+        /* End Global Variables */
+
+        /* 
+         * Update the knot each frame
+         */
+        function updateKnot(mesh, velocities)
+        {
+                 // the knot is moving left and has hit the left edge
+            if ((velocities.x < 0 && mesh.position.x <= bounds.minX) || 
+                 // the knot is moving right and has hit the right edge
+                (velocities.x > 0 && mesh.position.x >= bounds.maxX)) 
+            {
+                velocities.x *= -1; // reverse x direction
+                // change color to a random color
+                mesh.material.color.setHex(THREE.Math.randInt(0x0, 0xffffff));
+            }
+                 // knot moving down and hits bottom
+            if ((velocities.y < 0 && mesh.position.y <= bounds.minY) || // don't go off the top
+                 // knot moving up and hit top
+                (velocities.y > 0 && mesh.position.y >= bounds.maxY)) // don't go off the bottom
+            {
+                velocities.y *= -1; // reverse y direction
+                mesh.material.color.setHex(THREE.Math.randInt(0x0, 0xffffff)); // change color on hit
+            }
+            // apply updates
+            mesh.rotateX(0.025);
+            mesh.position.x += velocities.x;
+            mesh.position.y += velocities.y;
+        }
+
+        /* Create objects */
+        // create the knot
+        var knotGeo = new THREE.TorusKnotGeometry(8, 2);
+        var knotMat = new THREE.MeshStandardMaterial({wireframe: false, color: 0xff8000});
+        var knot = new THREE.Mesh(knotGeo, knotMat);
+        // move it away from the camera a bit
+        knot.position.set(0, 0, -144);
+        // make the knot show a shadow on the floor
+        knot.castShadow = true;
+        scene.add(knot);
+
+        // create a floor for the light to shine on
+        var floorGeo = new THREE.PlaneGeometry(256, 256);
+        var floorMat = new THREE.MeshStandardMaterial({color: 0x808080, dithering: true});
+        var floor = new THREE.Mesh(floorGeo, floorMat);
+        // rotate the floor so it's visible
+        floor.rotation.x = (Math.PI / 180) * -90;
+        // move the floor to match where the knot bounces
+        floor.position.set(0, -38, -144);
+        // show shadows
+        floor.receiveShadow = true;
+        scene.add(floor);
+        /* End of Create objects */
+
+        /* Create the lighting */
+        // add ambient lighting
+        var ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+        scene.add(ambientLight);
+
+        // add a spot light
+        var spotlight = new THREE.SpotLight(0xffffff, 1);
+        spotlight.position.set(32, 144, -144); // move to shine over the knot
+        spotlight.castShadow = true;
+        // reduce the angle so it only covers part of the floor
+        spotlight.angle = 25 * (Math.PI/180);
+        // point the spotlight at the floor
+        spotlight.target = floor;
+        scene.add(spotlight);
+        /* End of Lighting */
+
+
+	function animate() {
+		requestAnimationFrame(animate);
+		render();
+	}
+
+	function render() {
+		cameraControls.update();
+                updateKnot(knot, velocities);
+		renderer.render(scene, camera);
+	}
+	animate();
+	</script>
+</html>
+
