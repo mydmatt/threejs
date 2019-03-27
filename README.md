@@ -1,2 +1,2 @@
 # threejs
-web graphics and coding with three.js API
+web graphics and html coding with three.js API
