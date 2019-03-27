@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script type="text/javascript" src="https://getfirebug.com/firebug-lite-debug.js"></script>
+<meta name="description" content="CS4406 Computer Graphics - Assignment #5" />
+  	<meta charset="utf-8" />
+	<title>https://jsbin.com/mapazud/1/edit?html,output</title>
+	<style>
+		#container {
+			background: #000000;
+			width: 100%;
+			height: 100%;
+		}
+	</style>
+<meta charset=utf-8 />
+<title>https://jsbin.com/mapazud/1/edit?html,output</title>
+  
+<style id="jsbin-css">
+
+</style>
+</head>
+<body>
+<div id="container">
+</div>
+</body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/85/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.5/dat.gui.min.js"></script>
+	<script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/controls/OrbitControls.js"></script>
+	<script src="http://uopeopleweb.com/js/math.js"></script>
+	<script type="text/javascript">
+//General setup
+	var WIDTH = 500, HEIGHT = 500;
+	var VIEW_ANGLE = 45, ASPECT = WIDTH / HEIGHT, NEAR = 1, FAR = 1000;
+	var $container = $('#container');
+	var renderer = new THREE.WebGLRenderer
+	var scene = new THREE.Scene();
+	var clock = new THREE.Clock();
+	var camera = new THREE.PerspectiveCamera(VIEW_ANGLE,ASPECT,NEAR,FAR);
+	camera.position.z = 50;    	
+	scene.add(camera)
+	var cameraControls = new THREE.OrbitControls(camera, renderer.domElement);
+	cameraControls.addEventListener( 'mousemove', renderer );
+    cameraControls.autoRotate = true;
+	renderer.setSize(WIDTH, HEIGHT);
+	$container.append(renderer.domElement);
+    var pointLight = new THREE.PointLight(0xFFFFFF);
+    pointLight.position.set(5,0,40);
+    pointLight.intensity = 5;
+    pointLight.distance = 100;
+	scene.add(pointLight);
+
+	// Create a 5 by 5 by 5 cube
+     var geometry = new THREE.CubeGeometry(5,5,5)
+     var material = new THREE.MeshLambertMaterial( { color: 0x006600} );
+     var cube = new THREE.Mesh(geometry, material); 
+     scene.add(cube);
+   
+      // Creates variable with the edge measurements so that
+      // the cube bounces back correctly
+      var edge = 13;
+      
+      // Defines variables for velocity (how fast the cube moves) and time
+      // (how many timesteps)
+      var velX = 1.0, velY = 0.4;
+      var time = 0.25;
+     
+    // Create the variable for the cube rotation AND motion 
+     var render = function () {
+          
+    // Define how fast the cube will rotate
+      cube.rotation.x += 0.01; 
+      cube.rotation.y += 0.01;
+    // Define how the cube translates in the scene
+      cube.position.x += velX * time;
+      cube.position.y += velY * time;
+       
+    // Check if the cube reached one of the edges and in that case
+    // make it bounce back (by making it move in the opposite
+    // direction) and change color.
+       if (cube.position.x >= edge || cube.position.x <= -edge){
+         velX = -velX;
+          material.color.setRGB(Math.random(), 
+                                Math.random(),
+                                Math.random());
+         }
+      
+       if (cube.position.y >= edge || cube.position.y <= -edge){
+         velY = -velY;
+          material.color.setRGB(Math.random(), 
+                                Math.random(),
+                                Math.random());
+         }
+      renderer.render(scene, camera);
+    };
+	scene.add(camera);
+   
+	function animate() {
+		requestAnimationFrame(animate);
+		render();
+	}
+
+	function render() {
+		cameraControls.update();
+		renderer.render(scene, camera);
+	}
+	animate();
+	</script>
+</html>
