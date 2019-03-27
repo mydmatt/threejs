@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>https://jsbin.com/punanen/edit?html,output</title>
+	<style>
+		#container {
+			width: 100%;
+			height: 100%;
+            background: #000000;
+		}
+	</style>
+</head>
+<body>
+  <div id="container"></div>
+  <script src="https://cdn.rawgit.com/mrdoob/three.js/r92/build/three.min.js"></script>
+  <script src="https://cdn.rawgit.com/mrdoob/three.js/r92/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script> 
+  <script>
+var WIDTH = window.innerWidth, HEIGHT = window.innerHeight;
+var VIEW_ANGLE = 65, ASPECT = window.innerWidth / window.innerHeight, NEAR = .1, FAR = 100;
+var $container = $('#container');
+var renderer = new THREE.WebGLRenderer({antialias: true, alpha : true});
+renderer.setSize(WIDTH, HEIGHT);
+//renderer.shadowMap.enabled = true;
+renderer.setClearColor(0x666666,1); // dark grey background for space
+var scene = new THREE.Scene();
+var clock = new THREE.Clock();
+var camera = new THREE.PerspectiveCamera(VIEW_ANGLE,ASPECT,NEAR,FAR);
+camera.position.z = 10; 
+camera.position.x = -5;
+camera.position.y = 2;
+scene.add(camera);
+var cameraControls = new THREE.OrbitControls(camera, renderer.domElement);
+cameraControls.addEventListener( 'mousemove', renderer );
+//cameraControls.autoRotate = true;
+cameraControls.enableZoom = true;
+var ambientLight = new THREE.AmbientLight(0xffffff, .5 ); 
+scene.add(ambientLight);
+var directionalLight = new THREE.DirectionalLight( 0xffffff, 1.1 );
+directionalLight.position.set(camera.position);
+directionalLight.castShadow = true;
+scene.add(directionalLight);
+
+// helps with resizing windows
+
+window.addEventListener('resize', onWindowResize, false);
+function onWindowResize() {
+
+windowHalfX = window.innerWidth / 2;
+windowHalfY = window.innerHeight / 2;
+HEIGHT = window.innerHeight;
+WIDTH = window.innerWidth;
+
+camera.aspect = WIDTH / HEIGHT;
+camera.updateProjectionMatrix();
+renderer.setSize( WIDTH, HEIGHT );
+}
+    
+// add text to scene
+var text2 = document.createElement('div');
+text2.style.position = 'absolute';
+text2.style.width = 10;
+text2.style.height = 10;
+text2.innerHTML = "Single click to scale and double click to reset";
+text2.style.top = 100 + 'px';
+text2.style.left = 100 + 'px';
+document.body.appendChild(text2);
+
+$container.append(renderer.domElement);
+
+
+// plane
+
+var planeMaterial = new THREE.MeshBasicMaterial( { color: 0x000088, wireframe: true, side:THREE.DoubleSide } );
+var planeGeometry = new THREE.PlaneGeometry(10, 10,10,10);
+var myPlane = new THREE.Mesh(planeGeometry,planeMaterial);
+myPlane.rotation.x = ( Math.PI / 2) ;
+myPlane.position.y = -2;
+myPlane.position.z = 3;
+scene.add(myPlane);
+
+var paraFunction = function(u,v) 
+ {
+ x=-1+2*u;
+ y=-1+2*v;
+ z=y*y+x*x;
+//
+ return new THREE.Vector3(x, y, z);
+ };
+
+  var paraGeometry = new THREE.ParametricBufferGeometry(paraFunction ,21,21, true);
+  var paraMaterial = new THREE.MeshNormalMaterial();
+  var paraMesh = new THREE.Mesh( paraGeometry, paraMaterial );
+ paraMesh.verticesNeedUpdate = true;
+ paraGeometry.verticesNeedUpdate = true;
+ paraMesh.position.set (0,0,0);
+
+ scene.add( paraMesh );
+
+// add axis helper
+var axisHelper = new THREE.AxisHelper( 4 )
+scene.add( axisHelper );
+
+renderer.domElement.addEventListener( 'click', scaleIt, false );
+renderer.domElement.addEventListener( 'dblclick', resetScale, false );
+
+function scaleIt ( e ) { 
+	paraMesh.scale.x+=.1;
+	paraMesh.scale.y+=.1; 
+	paraMesh.scale.z+=.1; 
+	}
+function resetScale( e ) { 
+	paraMesh.scale.x=1;
+	paraMesh.scale.y=1; 
+	paraMesh.scale.z=1; 
+	}
+
+// ----------------------------------------
+
+function animate() {
+	requestAnimationFrame(animate);
+	render();
+	}
+
+function render() {
+	renderer.render(scene, camera);
+	}
+animate();
+
+</script>
+  </script>
+</body>
+</html>
+
+
