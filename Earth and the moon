@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="description" content="https://jsbin.com/fefarow/1/edit?html,output" />
+  	<meta charset="utf-8" />
+	<title>https://jsbin.com/fefarow/1/edit?html,output</title>
+	<style>
+		#container {
+			background: #FFFFFF;
+			width: 100%;
+			height: 100%;
+		}
+	</style>
+<meta charset=utf-8 />  
+<style id="jsbin-css"></style>
+</head>
+<body>
+<div id="container"></div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.5/dat.gui.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@fab06914157b741461ab6fe34f46b24e81506336/build/three.min.js"></script>
+<script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/5.4.2/math.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@e4063750a93a643fce333a17a06b6b5015d9dc99/examples/js/WebGL.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@7a86f938b389754af14b6001a5f7679b660c946b/examples/js/utils/SceneUtils.js"></script>
+<script type="text/javascript">
+//General setuip
+	var WIDTH = 600, HEIGHT = 600;
+	var VIEW_ANGLE = 45, ASPECT = WIDTH / HEIGHT, NEAR = 1, FAR = 1000;
+	var $container = $('#container');
+    if ( WEBGL.isWebGL2Available() )
+        {
+            var canvas = document.createElement( 'canvas' );
+            var context = canvas.getContext( 'webgl2' );
+            var renderer = new THREE.WebGLRenderer( { canvas: canvas, context: context} );
+        }
+        else if ( WEBGL.isWebGLAvailable() )
+        var renderer = new THREE.WebGLRenderer();   
+        else
+            throw "WebGL not available. No suitable renderer available.";  
+
+    renderer.setClearColor( 0x000000, 1 );
+    renderer.shadowMapEnabled = true;
+    renderer.shadowMapType = THREE.PCFSoftShadowMap;
+	var scene = new THREE.Scene();
+	var clock = new THREE.Clock();
+	var camera = new THREE.PerspectiveCamera(VIEW_ANGLE,ASPECT,NEAR,FAR);
+	camera.position.set(28, 96, 164);
+	scene.add(camera)
+ 	var cameraControls = new THREE.OrbitControls(camera, renderer.domElement);
+ 	cameraControls.addEventListener( 'mousemove', renderer );
+	renderer.setSize(WIDTH, HEIGHT);
+	$container.append(renderer.domElement);
+
+
+        /* Move the moon around the earth and rotate it on it's axis*/
+        function updateMoon()
+        {
+            // the x and z positions control the orbit,
+            // the position is the same as finding a point
+            // on the unit circle and multiplying by the 
+            // radius of the orbit
+            var newX = Math.cos(DEG2RAD * moonDeg) * moonOrbitRadius;
+            var newZ = Math.sin(DEG2RAD * moonDeg) * -moonOrbitRadius;
+            // the y position reflects the inclination of the moon's orbit
+            // around the earth. It should be 5.14 degrees (brews_ohare, 2011)
+            // giving an adjustmnet of ~5.59. But, due to moon's orbit 
+            // being much smaller to fit on the screen, the adjustment
+            // is changed to 8 to make it more noticable. This has the
+            // effect of placing the moon at y = 0 when it's directly
+            // between the sun and earth, causing a solar eclipse and y = -16
+            // when the earth is between the sun and moon, causing a lunar eclipse
+            var newY = (Math.cos(DEG2RAD * moonDeg) * 8) - 8 ;
+            // update the moon's position
+            moon.position.set(newX, newY, newZ);
+            // rotate the moon. 0.2 degrees makes the moon tidally locked
+            // to the earth like it is in reality
+            moon.rotateY(DEG2RAD * 0.22);
+        } // end updateMoon
+
+        // shortcut for conveniently converting degrees to radians
+        DEG2RAD = THREE.Math.DEG2RAD;
+
+        /* Textures for the earth and moon */
+        // with the exception of alphaAtmosphere, the following
+        // textures are from Hastings-Trew (2006); all textures
+        // have been resized to 512x256 to speed up loading
+        // alphaAtmosphere was adapted from Hastings-Trew's (2006)
+        // cloud map of earth using Gimp to map the alpha to the
+        // green channel for use in THREE.js
+        // 
+        // The callback function on each simply lets THREE
+        // know to update the material one it's loaded
+        var texEarth = new THREE.TextureLoader().load(
+            "https://i.imgur.com/S64Hbnd.jpg",
+            function(e) { matEarth.needsUpdate = true; }
+        );
+
+        var bumpEarth = new THREE.TextureLoader().load(
+            "https://i.imgur.com/9Gpckne.jpg",
+            function() { matEarth.needsUpdate = true; }
+        );
+
+        var specEarth = new THREE.TextureLoader().load(
+            "https://i.imgur.com/fwLVB9G.jpg",
+            function() { matEarth.needsUpdate = true; }
+        );
+
+        var texAtmosphere = new THREE.TextureLoader().load(
+            "https://i.imgur.com/NqC2oJ2.jpg",
+            function() { matAtmosphere.needsUpdate = true; }
+        );
+
+        var alphaAtmosphere = new THREE.TextureLoader().load(
+            "https://i.imgur.com/v3MrrGS.jpg",
+            function(e) { matAtmosphere.needsUpdate = true; }
+        );
+
+        var texMoon = new THREE.TextureLoader().load(
+            "https://i.imgur.com/JUgDrF7.jpg",
+            function() { matMoon.needsUpdate = true; }
+        );
+
+        var bumpMoon = new THREE.TextureLoader().load(
+            "https://i.imgur.com/ik5vmRk.jpg",
+            function() {matMoon.needsUpdate = true; }
+        );
+        /* End of earth and moon textures */
+
+        // create the moon
+        var geoMoon = new THREE.SphereGeometry(16, 32, 32);
+        var matMoon = new THREE.MeshPhongMaterial({map: texMoon,
+            bumpMap: bumpMoon, bumpScale: 2});
+        var moon = new THREE.Mesh(geoMoon, matMoon);
+        var moonDeg = -90; // used to control the moon's orbit
+        var moonMove = 0.22; // how many degrees the moon moves
+        var moonOrbitRadius = 64; // the distance between earth and moon's centers
+        moon.castShadow = true;
+        moon.receiveShadow = true; 
+        // position the moon so that it's between the camera and earth
+        // so that the user gets to see a solar eclipse shortly after the
+        // start
+        moon.position.set(0, 0, moonOrbitRadius);
+        // the moon's axis is tilted 6.58 degrees (brews_ohare, 2011)
+        // this gets the correct tilt
+        moon.rotateZ(DEG2RAD * -6.58);
+        // rotate the moon so the correct side faces the earth
+        moon.rotateY(DEG2RAD * 180);
+        scene.add(moon);
+        // end of create moon
+
+        // create the earth
+        var geoEarth = new THREE.SphereGeometry(20, 32, 32);
+        // the options for matEarth just set up the textures and
+        // makes the earth shiny
+        var matEarth = new THREE.MeshPhongMaterial({map: texEarth,
+            bumpMap: bumpEarth, specularMap: specEarth,
+            bumpScale: 2, shininess: 96});
+        var earth = new THREE.Mesh(geoEarth, matEarth);
+        earth.receiveShadow = true;
+        earth.castShadow = true;
+        // rotate the earth's axis to match the 23.44 degree
+        // tilt of the earth's axis (brews_ohare, 2011).
+        earth.rotateZ(DEG2RAD * -23.44);
+        scene.add(earth);
+        // end of create earth
+
+        // create the earth's atmosphere
+        // the clouds rotating around the earth are a 
+        // separate sphere that uses an alpha map
+        // to make the non-cloud areas transparent
+        // slightly larger radius to make it look more realistic
+        var geoAtmosphere = new THREE.SphereGeometry(16.5, 32, 32);
+        var matAtmosphere = new THREE.MeshPhongMaterial({map: texAtmosphere,
+                alphaMap: alphaAtmosphere, transparent: true, opacity: 2});
+        var atmosphere = new THREE.Mesh(geoAtmosphere, matAtmosphere);
+        // don't quite match the earth's tilt so the clouds look
+        // more interesting than when it's lined up perfectly.
+        atmosphere.rotateZ(DEG2RAD * -16);
+        atmosphere.receiveShadow = true;
+        scene.add(atmosphere);
+        // end of create earth's atmosphere
+
+        // create lighting
+        // set a weak ambient light so that the shaded/night
+        // parts of the sphere aren't impossible to see
+        // but still looks like night
+        var ambient = new THREE.AmbientLight(0xffffff, 0.075);
+        scene.add(ambient);
+
+        // add a point light to be the sun
+        // the color is slightly yellow to match the sun,
+        // any more yellow and the earth starts looking green
+        var sun = new THREE.PointLight(0xffffb0, 2, 500);
+        // move the sun to the right of the earth
+        sun.position.set(85, 0, 0);
+        sun.castShadow = true;
+        scene.add(sun);
+
+	function animate() {
+
+		requestAnimationFrame(animate);
+                // update the position in degrees of the moon
+                moonDeg += moonMove;
+                updateMoon(); // move and rotate the moon
+                earth.rotateY(DEG2RAD * 1.5); // rotate the earth
+                // rotate the atmosphere a little faster than the
+                // earth to make the clouds more realistic
+                atmosphere.rotateY(DEG2RAD * 1.75);
+		render();
+	}
+
+	function render() {
+ 		cameraControls.update();
+		renderer.render(scene, camera);
+	}
+	animate();
+	</script>
+  </body>
+</html>
+
+<!-- 
+References:
+
+brews_ohare. (2011, December 11). Earth-Moon.jpg [Image File]. In Wikipedia. Retrieved from https://en.wikipedia.org/wiki/File:Earth-Moon.svg
+
+Hastings-Trew, J. (2006). Planet Earth Texture Maps. Retrieved from http://planetpixelemporium.com/earth.html
+-->
