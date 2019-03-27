@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>https://jsbin.com/sufidoj/edit?html,output</title>
+	<style>
+		#container {
+			width: 100%;
+			height: 100%;
+            background: #000000;
+		}
+	</style>
+</head>
+<body>
+  <div id="container"></div>
+  <script src="https://cdn.rawgit.com/mrdoob/three.js/r92/build/three.min.js"></script>
+  <script src="https://cdn.rawgit.com/mrdoob/three.js/r92/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script> 
+  <script>
+
+
+	// Create Canvas Texture for TexturedMesh
+	// Code adapted from Three.js transparency example at 
+	// https://github.com/mrdoob/three.js/blob/master/examples/webgl_materials_blending.html
+	var canvas = document.createElement( 'canvas' );
+	var ctx = canvas.getContext( '2d' );
+	canvas.width = canvas.height = 32;
+	ctx.fillStyle = '#ddd';
+	ctx.fillRect( 0, 0, 32, 32 );
+	ctx.fillStyle = '#555';
+	ctx.fillRect( 0, 0, 16, 16 );
+	ctx.fillStyle = '#999';
+	ctx.fillRect( 8, 8, 8, 8 );
+	ctx.fillStyle = '#555';
+	ctx.fillRect( 16, 16, 16, 16 );
+	ctx.fillStyle = '#777';
+	ctx.fillRect( 24, 24, 16, 16 );
+
+	// Allocate variables and call init+animate to start the scene
+	var SCENE_SCALE, MESH_SCALE, GAP_SCALE;
+	var scene, camera, renderer;
+	var reflectedLight, ambientLight, texture;
+	var texturedGeometry, texturedMaterial, texturedMesh;
+	var transparentGeometry, transparentMaterial, transparentMesh;
+	var coloredGeometry, coloredMaterial, coloredMesh;
+	var reflectingGeometry, reflectingMaterial, reflectingMesh;
+	var count = 0
+	var direction = -1;
+	init();
+	animate();
+
+	function init() {
+	  SCENE_SCALE = 400; // Chosen at random
+	  MESH_SCALE = SCENE_SCALE/3; // Chosen via testing
+	  GAP_SCALE = SCENE_SCALE/4; // Chosen via testing
+  
+  	scene = new THREE.Scene();
+
+	camera = new THREE.OrthographicCamera( SCENE_SCALE / - 2, SCENE_SCALE / 2, SCENE_SCALE / 2, SCENE_SCALE / - 2, 1, SCENE_SCALE+MESH_SCALE );
+	camera.position.z = SCENE_SCALE;
+
+	renderer = new THREE.WebGLRenderer();
+	renderer.setSize( SCENE_SCALE, SCENE_SCALE );
+	document.body.appendChild( renderer.domElement );
+    
+    // Set ambient light to showcase true material colors
+  	ambientLight = new THREE.AmbientLight( 0xffffff );
+  	scene.add( ambientLight );
+  
+  // Set the created canvas texture to a wrapping map
+  	texture = new THREE.CanvasTexture( canvas );
+  	texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+	  texture.repeat.set( 8, 4 );
+
+ 
+  /* Set Image Texture Mesh
+  Note: Material.map is set to canvas `texture`
+  */
+  texturedGeometry = new THREE.BoxGeometry( MESH_SCALE, MESH_SCALE, MESH_SCALE );
+  texturedMaterial = new THREE.MeshBasicMaterial( { map: texture } );
+  texturedMesh = new THREE.Mesh( texturedGeometry, texturedMaterial );
+  texturedMesh.position.set(-GAP_SCALE, GAP_SCALE, 0);
+  scene.add( texturedMesh );
+  
+  /* Set Transparency Mesh
+  Note that Material.map = true and Material.blending = AdditiveBlending
+  and that Geometry.positionZ = MESH_SCALE.  The positioning is so that
+  it is in front of the texturedMesh during animation.
+  */
+  transparentGeometry = new THREE.BoxGeometry( MESH_SCALE, MESH_SCALE, MESH_SCALE );
+  transparentMaterial = new THREE.MeshBasicMaterial( {transparent: true, blending: THREE.AdditiveBlending, color: 0xaa0000} );
+  transparentMesh = new THREE.Mesh( transparentGeometry, transparentMaterial );
+  transparentMesh.position.set(GAP_SCALE, GAP_SCALE, MESH_SCALE)
+  scene.add( transparentMesh );
+
+  /* Set Base Color Mesh
+  Note that a LambertMaterial is used which uses a lighting model, but
+  does not reflect light.  The white ambient light allows the material
+  to show up as green.  Also, this mesh is at positionZ=MESH_SCALE so
+  that it can cover the reflecting mesh during an animation.
+  */
+  coloredGeometry = new THREE.BoxGeometry( MESH_SCALE, MESH_SCALE, MESH_SCALE );
+  coloredMaterial = new THREE.MeshLambertMaterial({color: 0x00aa00} );
+  coloredMesh = new THREE.Mesh( coloredGeometry, coloredMaterial );
+  coloredMesh.position.set(-GAP_SCALE, -GAP_SCALE, MESH_SCALE);
+  scene.add( coloredMesh );
+
+
+  /* Set Reflecting Mesh
+  Note the use of PhongMaterial which allows lights to add their color to
+  the color of the mesh!
+  */
+  reflectingGeometry = new THREE.BoxGeometry( MESH_SCALE, MESH_SCALE, MESH_SCALE );
+  reflectingMaterial = new THREE.MeshPhongMaterial({color: 0x0000aa, side: THREE.DoubleSide});
+  reflectingMesh = new THREE.Mesh( reflectingGeometry, reflectingMaterial );
+  reflectingMesh.position.set(GAP_SCALE, -GAP_SCALE, 0);
+  scene.add( reflectingMesh );
+  
+  // Set colored light to illustrate reflective and non-reflective materials
+  reflectedLight = new THREE.PointLight( 0xaa0000, 10, 0, 1 );
+  reflectedLight.position.set(GAP_SCALE, -GAP_SCALE, MESH_SCALE);
+  scene.add( reflectedLight );
+}
+
+function animate() {
+  requestAnimationFrame( animate );
+  renderer.render( scene, camera );
+  
+  // Simple counter that reverses all animation directions
+  // after a tested amount of time.
+  count++;
+  if(count == SCENE_SCALE/2) {
+    count=0;
+    direction=-direction;
+  }
+  
+  // Rotate the texturedMesh to show all sides are covered
+  texturedMesh.rotateX(0.01);
+  texturedMesh.rotateY(0.01);
+  texturedMesh.rotateZ(0.01);
+  
+  // Move transparentMesh over texturedMesh to showcase
+  // blending.
+  transparentGeometry.translate(direction,0,0);
+  
+  // Scale coloredMesh to cover reflective material
+  coloredGeometry.scale(-direction*0.005+1,1,1);
+}
+
+
+  </script>
+</body>
+</html>
+
+
